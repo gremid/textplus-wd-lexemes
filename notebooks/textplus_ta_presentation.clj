@@ -1,8 +1,8 @@
-^{:nextjournal.clerk/visibility {:code :hide}}
+^{:nextjournal.clerk/visibility {:code :hide} :nextjournal.clerk/toc true}
 (ns textplus-ta-presentation
   (:require
-   [mundaneum.properties :refer [wdt]]
-   [mundaneum.query :as wdq]
+   [julesratte.wikidata :as wd]
+   [julesratte.wikidata.properties :refer [wdt]]
    [nextjournal.clerk :as clerk]
    [zdl.wikidata :refer [wd-a]]
    [clojure.java.io :as io]))
@@ -12,20 +12,37 @@
 ;; > Wikidata is a free and open knowledge base that **can be read and edited by
 ;; both humans and machines**. – https://wikidata.org/
 ;;
-;; Das [ZDL](https://www.zdl.org/) hat in seinem Projektantrag ein Arbeitspaket
-;; zur Dissemination seiner Ergebnisse im Austausch und in Zusammenarbeit mit
-;; Community-Projekten. Ursprünglich wurde hier an Projekte
-;; wie [Wiktionary](https://de.wiktionary.org/)
-;; oder [OmegaWiki](http://www.omegawiki.org/) gedacht. Im Oktober 2019 fand in
-;; Berlin dann
+;; Das [ZDL](https://www.zdl.org/) hat in seinem Projektantrag ein
+;; Arbeitspaket zur Dissemination seiner Ergebnisse im Austausch und
+;; in Zusammenarbeit mit Community-Projekten. Ursprünglich wurde hier
+;; an Projekte wie [Wiktionary](https://de.wiktionary.org/)
+;; oder [OmegaWiki](http://www.omegawiki.org/) gedacht. Im Oktober
+;; 2019, kurz nach Projektstart, fand in Berlin allerdings
 ;; die [WikidataCon](https://www.wikidata.org/wiki/Wikidata:WikidataCon_2019)
-;; zum Thema *languages and Wikidata* statt. Hier gab es erste Gespräche mit der
-;; Community und der Wikimedia Foundation zu einer möglichen Zusammenarbeit.
+;; zum Thema *Languages and Wikidata* statt. Dort gab es erste
+;; Gespräche mit der Community und der Wikimedia Foundation zu einer
+;; möglichen Zusammenarbeit mit WikiData. Im Herbst 2022 spendete
+;; das [DWDS](https://www.dwds.de/) als gegenwartssprachliche
+;; Komponente des ZDL erstmals Daten in Form eines automatisierten Imports
+;; an Wikidata.
 ;;
-;; Im Herbst 2022 war es dann soweit. Das [DWDS](https://www.dwds.de/) als
-;; gegenwartssprachliche Komponente des ZDL spendete Daten in Form eines
-;; automatisierten Imports an Wikidata.
+
+;; ## Wikidata Lexicographical Data – Model
 ;;
+;; Wikidata modelliert Wissen in seiner Datenbasis in Form von Aussagen, ähnlich
+;; wie in RDF-basierten Wissengraphen aus dem Kontext des Semantic Web. Aussagen
+;; und das Schema, dem diese Aussagen genügen sollen, werden in derselben
+;; Datenbasis entwickelt und gepflegt. Das Datenmodell für lexikographische
+;; Informationen in Wikidata lehnt sich dabei an das
+;; [Lexicon Model for Ontologies (lemon)](https://lemon-model.net/) an und ist
+;; durch die Community erweiterbar.
+
+^{::clerk/visibility {:code :hide}}
+(->>
+ (slurp (io/file "notebooks/Lexeme_data_model.svg"))
+ (clerk/html {::clerk/width :wide}))
+
+
 ;; ## Der Datenimport
 ;;
 ;; Der Import der Daten wurde über die [MediaWiki
@@ -38,90 +55,78 @@
 ;; 1. Der Bot wurde zunächst gegen eine [containerisierte Wikibase-Testinstanz](https://github.com/zentrum-lexikographie/wikimedia/tree/master/ansible) getestet.
 ;; 1. Dann durchlief er einen [Wikidata-seitigen QA-Prozess](https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/DwdsBot).
 ;; 1. Nach Akzeptanz des Bots wurden ca. [185.000 Lexeme](https://www.wikidata.org/w/index.php?title=Special%3AContributions&target=DwdsBot&namespace=146&newOnly=1) importiert.
-;;
-;; ## Sprachen in Wikidata
-;;
-;; Infolge des Imports ist Deutsch eine der am umfrangreichsten repräsentierten
-;; Sprachen in Wikidata.
 
-^{::clerk/visibility {:code :hide}}
-(clerk/html {::clerk/width :wide} (slurp (io/file "notebooks/wd-langs.svg")))
-
-;; ## Lexicographical Data – Model
-;;
-;; Wikidata modelliert Wissen in seiner Datenbasis in Form von Aussagen, ähnlich
-;; wie in RDF-basierten Wissengraphen aus dem Kontext des Semantic Web. Aussagen
-;; und das Schema, dem diese Aussagen genügen sollen, werden derselben
-;; Datenbasis entwickelt und gepflegt. Das Datenmodell für lexikographische
-;; Informationen in Wikidata lehnt sich dabei an das
-;; [Lexicon Model for Ontologies (lemon)](https://lemon-model.net/) an und ist 
-;; durch die Community erweiterbar.
-
-^{::clerk/visibility {:code :hide}}
-(->>
- (slurp (io/file "notebooks/Lexeme_data_model.svg"))
- (clerk/html {::clerk/width :wide}))
-
-;; ## Nutzung der Datenbasis – Abfragen via SPARQL
+;;;; ## Nutzung der Datenbasis – Abfragen via SPARQL
 ;;
 ;; Wikidata bietet einen Abfragedienst – den [Wikidata Query
 ;; Service](https://query.wikidata.org/), über den mittels SPARQL Abfragen an
 ;; die Wissensbasis gestellt werden können.
+
 ;;
-;; Die dem obigen *bubble chart* zugrundeliegende Abfrage sieht wie folgt aus:
+;; ### Sprachen in Wikidata
+;;
+;; Infolge des Imports ist Deutsch eine der am umfrangreichsten repräsentierten
+;; Sprachen in Wikidata.
 
 ^{::clerk/viewer clerk/table}
 (->>
- (wdq/query
+ (wd/query
   '{:select   [?language [(count :*) ?lexemes]]
     :where    [[_ :dct/language ?language]]
     :group-by [?language]
     :order-by [(desc ?lexemes)]})
- (map (juxt (comp wdq/label :language)
+ (map (juxt (comp wd/label :language)
             (comp clerk/html wd-a :language)
             :lexemes))
  (cons ["Sprache" "WD-ID" "Lexeme"])
  (clerk/use-headers))
 
-;; ## Informationen zu deutschen Lexemen in Wikidata
+;; ### Informationen zu deutschen Lexemen in Wikidata
 
-;; Da das Schema ebenfalls in Wikidata enthalten ist und über den Abfragedienst
-;; zur Verfügung steht, können wir auch das Schema per SPARQL untersuchen. Alle
-;; Eigenschaften, die Lexemen zugewiesen werden können:
-
-(def lexeme-properties
-  (->>
-   `{:select   [?prop]
-     :where    [[?prop ~(wdt :instance-of) ~(wdq/entity "Wikidata property for lexemes")]]
-     :order-by [(asc ?prop)]}
-   (wdq/query)
-   (into #{} (map #(keyword "wdt" (name (:prop %)))))))
-
-;; Anzahl der Eigenschaften:
-
-(count lexeme-properties)
-
-;; Für die ermittelten Eigenschaften fragen wir jeweils die Anzahl der Entitäten/Lexeme ab, denen Werte für die Eigenschaft zugewiesen wurden:
+;; Da das Schema ebenfalls in Wikidata enthalten ist und über den
+;; Abfragedienst zur Verfügung steht, können wir auch das Schema per
+;; SPARQL untersuchen. Wir ermitteln zunächst alle Eigenschaften, die
+;; Lexemen zugewiesen werden können. Für die ermittelten Eigenschaften
+;; fragen wir dann jeweils die Anzahl der Entitäten/Lexeme ab, denen
+;; Werte für die Eigenschaft zugewiesen wurden:
 
 ^{::clerk/visibility {:result :hide}}
 (def german-lang
-  (wdq/entity "German"))
+  (wd/entity "German"))
+
+^{::clerk/visibility {:result :hide}}
+(def lexeme-property-type
+  (wd/entity "Wikidata property for lexemes"))
+
+^{::clerk/visibility {:result :hide}}
+(def lexeme-properties
+  (->>
+   `{:select   [?prop]
+     :where    [[?prop ~(wdt :instance-of) ~lexeme-property-type]]
+     :order-by [(asc ?prop)]}
+   (wd/query)
+   (into #{} (map #(keyword "wdt" (name (:prop %)))))))
+
+^{::clerk/visibility {:result :hide}}
+(def lexeme-property-counts
+  (->>
+   (partition-all 25 lexeme-properties)
+   (mapcat
+    #(wd/query
+      `{:select [?property ?lexemes]
+        :where  [~(->>
+                   `[[:where {:select [[~prop ?property] [(count ?l) ?lexemes]]
+                              :where  [[?l ~prop _]
+                                       [?l :dct/language ~german-lang]]}]]
+                   (for [prop %])
+                   (into [:union]))]}))
+   (filter (comp pos? :lexemes))
+   (sort-by :lexemes #(compare %2 %1))))
 
 ^{::clerk/viewer clerk/table}
 (->>
- (wdq/query
-  `{:select [?d ?c]
-    :where  [~(->>
-               `[[:where {:select [[(count ?l) ?c] [~prop ?d]]
-                          :where  [[?l ~prop _]
-                                   [?l :dct/language ~german-lang]]}]]
-               (for [prop props])
-               (into [:union]))]})
- (for [props (partition-all 25 lexeme-properties)])
- (flatten)
- (filter (comp pos? :c))
- (map (juxt (comp clerk/html wd-a :d) (comp wdq/label :d) :c))
- (sort-by #(nth % 2) #(compare %2 %1))
+ lexeme-property-counts
+ (map (juxt (comp clerk/html wd-a :property) (comp wd/label :property) :lexemes))
  (cons ["WD-ID" "Eigenschaft" "dt. Lexeme"])
  (clerk/use-headers))
 
@@ -133,12 +138,12 @@
 
 ^{::clerk/viewer clerk/table}
 (->>
- (wdq/query
+ (wd/query
   `{:select [?lemma ?dwds ?duden ?dwb ?lexeme]
     :where  [[?lexeme :wikibase/lemma ?lemma]
-             [?lexeme ~(wdt :DWDS-lemma-ID) ?dwds]
-             [?lexeme ~(wdt :Duden-ID) ?duden]
-             [?lexeme ~(wdt :DWB-lemma-ID) ?dwb]]
+             [?lexeme ~(wdt :dwds-lemma-id) ?dwds]
+             [?lexeme ~(wdt :duden-lexeme-id) ?duden]
+             [?lexeme ~(wdt :dwb-lemma-id) ?dwb]]
     :limit  20})
  (map (juxt (comp clerk/html wd-a :lexeme) :lemma :dwds :duden :dwb))
  (cons ["WD-ID" "Lemma" "DWDS" "Duden" "DWB"])
@@ -149,24 +154,22 @@
 ^{::clerk/visibility {:result :hide}}
 (defn pos-stats
   [ext-id]
-  (wdq/query
-   `{:select   [?pos [(count ?lexeme) ?c]]
-     :where    [[?lexeme :wikibase/lexicalCategory ?pos]
-              [?lexeme ~(wdt ext-id) _]]
-     :group-by [?pos]
-     :order-by [(desc ?c)]
-     :limit    10}))
+  (->>
+   (wd/query
+    `{:select   [?pos [(count ?lexeme) ?c]]
+      :where    [[?lexeme :wikibase/lexicalCategory ?pos]
+                 [?lexeme ~(wdt ext-id) _]]
+      :group-by [?pos]
+      :order-by [(desc ?c)]
+      :limit    10})
+   (map (juxt (comp clerk/html wd-a :pos) (comp wd/label :pos) :c))
+   (cons ["ID" "Wortklasse" "Lexeme"])
+   (clerk/use-headers)
+   (clerk/table)))
 
+;; ### DWDS vs. Duden
+
+^{::clerk/visibility {:code :hide}}
 (clerk/row
- (->>
-  (pos-stats :elexiko-ID)
-  (map (juxt (comp clerk/html wd-a :pos) (comp wdq/label :pos) :c))
-  (cons ["W-ID" "elexiko-Wortklasse" "Lexeme"])
-  (clerk/use-headers)
-  (clerk/table))
- (->>
-  (pos-stats :DWB-lemma-ID)
-  (map (juxt (comp clerk/html wd-a :pos) (comp wdq/label :pos) :c))
-  (cons ["W-ID" "DWB-Wortklasse" "Lexeme"])
-  (clerk/use-headers)
-  (clerk/table)))
+ (pos-stats :dwds-lemma-id)
+ (pos-stats :duden-lexeme-id))

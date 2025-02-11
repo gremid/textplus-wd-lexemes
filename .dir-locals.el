@@ -1,1 +1,1 @@
-((clojure-mode . ((cider-clojure-cli-aliases . "-A:env/dev"))))
+((clojure-mode . ((cider-clojure-cli-aliases . "-A:dev/env"))))

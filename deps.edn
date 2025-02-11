@@ -1,7 +1,7 @@
 {:paths   ["src"]
- :deps    {io.github.nextjournal/clerk {:mvn/version "0.13.842"}
-           io.github.gremid/mundaneum  {:git/sha "cd531550f66075f0a2c5a2b03be5493de995c749"}
-           com.fzakaria/slf4j-timbre   {:mvn/version "0.3.21"}}
+ :deps    {io.github.nextjournal/clerk {:mvn/version "0.16.1016"}
+           io.github.gremid/julesratte {:git/sha "223492998c979f293bdd31a1e3f467841c711984"}
+           com.fzakaria/slf4j-timbre   {:mvn/version "0.4.1"}}
  :aliases {:nextjournal/clerk
            {:exec-fn   nextjournal.clerk/build!
             :exec-args {:index "notebooks/textplus_ta_presentation.clj"}}}}

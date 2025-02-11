@@ -1,29 +1,26 @@
 (ns zdl.wikidata
   (:require
-   [mundaneum.query :refer [default-language query *default-language*]]
+   [julesratte.wikidata :as wd]
    [clojure.string :as str]))
 
-(def lexeme*
+(def lexeme
   "Memoized implementation of language-aware entity lookup."
   (memoize
-   (fn [lang lemma criteria]
+   (fn lexeme
+     ([lemma]
+      (lexeme :de lemma))
+     ([lang lemma]
+      (lexeme lang lemma []))
+     ([lang lemma criteria]
      (-> `{:select [?lexeme]
            :where  [[?lexeme :a :ontolex/LexicalEntry]
                     [?lexeme :wikibase/lemma {~lang ~lemma}]
                     ~@(mapv (fn [[p e]] `[?item ~p ~e])
                             (partition 2 criteria))]
            :limit 1}
-         query
+         wd/query
          first
-         :lexeme))))
-
-(defn lexeme
-  "Return a keyword like :wd/Q42 for the most popular WikiData entity that matches `label`."
-  [label & criteria]
-  (let [[lang label'] (if (map? label)
-                        (first label)
-                        [(default-language) label])]
-    (lexeme* lang label' criteria)))
+         :lexeme)))))
 
 (defn wd-a
   [kw]
@@ -40,5 +37,5 @@
 
 
 (comment
-  (binding [*default-language* :de] (lexeme "Zyklop"))
+  (lexeme "Zyklop")
   (wd-a :wd/Q188))
